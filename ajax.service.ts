@@ -2,15 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse, HttpResponse } from '@angular/common/http';
 
 interface ajaxInterface {
-  type?: 'post'|'get'|'upload';
+  type?: 'post' | 'get';
   strgfy?: boolean;
   data?: any;
-  cache?: boolean;
-  rawData?: boolean;
-  loader?: boolean;
-  chat?: boolean;
-  chatAuthKey?: string;
-  handleErrors?: boolean;
+  cache?: boolean; // in case of GET it adds extra params to the url to avoid caching response...cough...Safari...cough
   callback?: (arg0: any) => void;
 }
 
@@ -36,10 +31,8 @@ export class AjaxService {
   private readonly ajaxDefaults = {
     method: 'post', 
     strgfy: true,
-    handleErrors: false,
     url: null,
-    uri: null,
-    rawData: false
+    uri: null
   }
 
   public post(data: ajaxTypeInterface): void {
@@ -109,11 +102,6 @@ export class AjaxService {
 
     if (response.body.auth === 0) {
       alert('Session lost');
-      return;
-    }
-
-    if (data.handleErrors && response.body.success == 0) {
-        alert(response.body.message ? response.body.message + '<br />' + response.body.sql : 'An error occured');
       return;
     }
 
