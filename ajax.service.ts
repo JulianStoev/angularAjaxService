@@ -63,6 +63,32 @@ export class AjaxService {
     if (data.uri) {
       data.url = data.uri;
     }
+    
+    const ajaxResponse = (response: HttpResponse<any>, data: ajaxInterface): void => {
+      if (!response || !response.body) {
+        alert('There was no response from the server');
+        return;
+      }
+      if (response.body.auth === 0) {
+        alert('Session lost');
+        return;
+      }
+      if (typeof data.callback == 'function') {
+        data.callback(response.body);
+      }
+    };
+    
+    const handleError = (error: HttpErrorResponse): void => {
+      if (error.error instanceof ErrorEvent) {
+        alert('An error occurred: ' + error.error.message.toString());
+        return;
+      }
+      if (error.status == 200) {
+        alert(error.error.text);
+      } else {
+        alert('Backend returned code ' + error.status);
+      }
+    };
 
     switch(data.type) {
       case 'get':
@@ -74,10 +100,10 @@ export class AjaxService {
         }
         this.http.get(data.url + data.data, options).subscribe(
           (success: ArrayBuffer) => {
-            this.ajaxResponse(success as any, data);
+            ajaxResponse(success as any, data);
           },
           (error: HttpErrorResponse) => {
-            this.handleError(error);
+            handleError(error);
           }
         );
         break;
@@ -85,40 +111,13 @@ export class AjaxService {
       default:
         this.http.post(data.url!, data.data, options).subscribe(
           (success: ArrayBuffer) => {
-            this.ajaxResponse(<any>success, data);            
+            ajaxResponse(success as any, data);            
           },
           (error: HttpErrorResponse) => {
-            this.handleError(error);
+            handleError(error);
           }
         );
     }
   }
 
-  private ajaxResponse(response: HttpResponse<any>, data: ajaxInterface): void {
-    if (!response || !response.body) {
-      alert('There was no response from the server');
-      return;
-    }
-
-    if (response.body.auth === 0) {
-      alert('Session lost');
-      return;
-    }
-
-    if (typeof data.callback == 'function') {
-      data.callback(response.body);
-    }
-  }
-
-  private handleError(error: HttpErrorResponse): void {
-    if (error.error instanceof ErrorEvent) {
-        alert('An error occurred: ' + error.error.message.toString());
-    } else {
-      if (error.status == 200) {
-        alert(error.error.text);
-      } else {
-        alert('Backend returned code ' + error.status);
-      }
-    }
-  };
 }
