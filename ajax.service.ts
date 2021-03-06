@@ -46,7 +46,9 @@ export class AjaxService {
 
   private ajax(_data: ajaxTypeInterface): any {
     const data: ajaxTypeInterface = Object.assign({}, JSON.parse(JSON.stringify(this.ajaxDefaults)), _data);
-    const headers = {} as any;
+    const headers = {} as {
+      [name: string]: string | string[];
+    };
 
     if (data.strgfy) {
       headers['Content-Type'] = 'application/json';
