@@ -33,7 +33,7 @@ export class AjaxService {
     strgfy: true,
     url: null,
     uri: null
-  }
+  };
 
   public post(data: ajaxTypeInterface): void {
     data.type = 'post';
@@ -45,7 +45,7 @@ export class AjaxService {
   }
 
   private ajax(_data: ajaxTypeInterface): any {
-    const data:ajaxTypeInterface = Object.assign({}, JSON.parse(JSON.stringify(this.ajaxDefaults)), _data);
+    const data: ajaxTypeInterface = Object.assign({}, JSON.parse(JSON.stringify(this.ajaxDefaults)), _data);
     const headers = {} as any;
 
     if (data.strgfy) {
@@ -64,7 +64,7 @@ export class AjaxService {
       data.url = data.uri;
     }
     
-    const ajaxResponse = (response: HttpResponse<any>, data: ajaxInterface): void => {
+    const ajaxResponse = (response: HttpResponse<any>): void => {
       if (!response || !response.body) {
         alert('There was no response from the server');
         return;
@@ -83,7 +83,7 @@ export class AjaxService {
         alert('An error occurred: ' + error.error.message.toString());
         return;
       }
-      if (error.status == 200) {
+      if (error.status === 200) {
         alert(error.error.text);
       } else {
         alert('Backend returned code ' + error.status);
@@ -93,14 +93,14 @@ export class AjaxService {
     switch(data.type) {
       case 'get':
         if (!data.cache) {
-          data.data = '_=' + new Date().getTime() + (data.data != '' ? '&' + data.data : '');
+          data.data = '_=' + new Date().getTime() + (data.data !== '' ? '&' + data.data : '');
         }
-        if (data.data != '') {
+        if (data.data !== '') {
           data.data = '?' + data.data;
         }
         this.http.get(data.url + data.data, options).subscribe(
           (success: ArrayBuffer) => {
-            ajaxResponse(success as any, data);
+            ajaxResponse(success as any);
           },
           (error: HttpErrorResponse) => {
             handleError(error);
@@ -111,7 +111,7 @@ export class AjaxService {
       default:
         this.http.post(data.url!, data.data, options).subscribe(
           (success: ArrayBuffer) => {
-            ajaxResponse(success as any, data);            
+            ajaxResponse(success as any);
           },
           (error: HttpErrorResponse) => {
             handleError(error);
