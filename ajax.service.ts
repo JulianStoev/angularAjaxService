@@ -1,14 +1,15 @@
+// Ajax Service v1.1
+// https://github.com/JulianStoev/angularAjaxService
+
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse, HttpResponse } from '@angular/common/http';
 
 interface ajaxInterface {
-  type?: 'post' | 'get';
-  strgfy?: boolean;
+  contentJson?: boolean;
   data?: any;
-  cache?: boolean; // in case of GET it adds extra params to the url to avoid caching response...cough...Safari...cough
+  noCache?: boolean;
   callback?: (arg0: any) => void;
 }
-
 interface uriInterface extends ajaxInterface {
   uri: string;
   url?: string;
@@ -18,6 +19,10 @@ interface urlInterface extends ajaxInterface {
   url: string;
 }
 type ajaxTypeInterface = urlInterface | uriInterface;
+interface headersInterface {
+  [name: string]: string | string[];
+}
+type acceptedMethodsInterface = 'post' | 'get' | 'put' | 'delete' | 'head' | 'options';
 
 @Injectable({
   providedIn: 'root'
@@ -29,97 +34,112 @@ export class AjaxService {
   ) { }
 
   private readonly ajaxDefaults = {
-    method: 'post', 
-    strgfy: true,
-    url: null,
-    uri: null
+    contentJson: true
   };
 
   public post(data: ajaxTypeInterface): void {
-    data.type = 'post';
-    this.ajax(data);
+    this.ajax(data, 'post');
   }
   public get(data: ajaxTypeInterface): void {
-    data.type = 'get';
-    this.ajax(data);
+    this.ajax(data, 'get');
+  }
+  public put(data: ajaxTypeInterface): void {
+    this.ajax(data, 'put');
+  }
+  public delete(data: ajaxTypeInterface): void {
+    this.ajax(data, 'delete');
+  }
+  public head(data: ajaxTypeInterface): void {
+    this.ajax(data, 'head');
+  }
+  public options(data: ajaxTypeInterface): void {
+    this.ajax(data, 'options');
   }
 
-  private ajax(_data: ajaxTypeInterface): any {
-    const data: ajaxTypeInterface = Object.assign({}, JSON.parse(JSON.stringify(this.ajaxDefaults)), _data);
-    const headers = {} as {
-      [name: string]: string | string[];
-    };
+  private ajax(_data: ajaxTypeInterface, method: acceptedMethodsInterface): void {
+    const data = this.prepare.data(_data, method);
+    const options = this.prepare.headers(data);
 
-    if (data.strgfy) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    // add your auth code here
-    // headers['authentication'] = 'myauth';
-
-    const options: any = {
-      observe: 'response',
-      headers: new HttpHeaders(headers)
-    };
-
-    if (data.uri) {
-      data.url = data.uri;
-    }
-    
-    const ajaxResponse = (response: HttpResponse<any>): void => {
-      if (!response || !response.body) {
-        alert('There was no response from the server');
-        return;
-      }
-      if (response.body.auth === 0) {
-        alert('Session lost');
-        return;
-      }
-      if (typeof data.callback == 'function') {
-        data.callback(response.body);
-      }
-    };
-    
-    const handleError = (error: HttpErrorResponse): void => {
-      if (error.error instanceof ErrorEvent) {
-        alert('An error occurred: ' + error.error.message.toString());
-        return;
-      }
-      if (error.status === 200) {
-        alert(error.error.text);
-      } else {
-        alert('Backend returned code ' + error.status);
-      }
-    };
-
-    switch(data.type) {
+    switch(method) {
       case 'get':
-        if (!data.cache) {
-          data.data = '_=' + new Date().getTime() + (data.data !== '' ? '&' + data.data : '');
-        }
-        if (data.data !== '') {
-          data.data = '?' + data.data;
-        }
-        this.http.get(data.url + data.data, options).subscribe(
+      case 'head':
+      case 'options':
+      case 'delete':
+        this.http[method](data.url, options).subscribe(
           (success: ArrayBuffer) => {
-            ajaxResponse(success as any);
+            this.handle.response(success as any, data);
           },
           (error: HttpErrorResponse) => {
-            handleError(error);
+            this.handle.error(error);
           }
         );
         break;
 
-      default:
-        this.http.post(data.url!, data.data, options).subscribe(
+      case 'post':
+      case 'put':
+        this.http[method](data.url, data.data, options).subscribe(
           (success: ArrayBuffer) => {
-            ajaxResponse(success as any);
+            this.handle.response(success as any, data);
           },
           (error: HttpErrorResponse) => {
-            handleError(error);
+            this.handle.error(error);
           }
         );
+        break;        
     }
   }
+
+  private readonly prepare = {
+    data: (data: ajaxTypeInterface, type: acceptedMethodsInterface): ajaxTypeInterface => {
+      if (data.uri) {
+        data.url = data.uri;
+      }
+
+      if (type === 'get') {
+        if (data.noCache) {
+          data.data = `_=${new Date().getTime() + (data.data ? `&${data.data}` : '')}`;
+        }
+        data.url += `?${data.data}`;
+      }
+
+      return {...this.ajaxDefaults, ...data};
+    },
+    headers: (data: ajaxTypeInterface) => {
+      const headers = {} as headersInterface;
+
+      // headers.Authentication = 'your token';
+
+      if (data.contentJson) {
+        headers['Content-Type'] = 'application/json';
+      }
+      return {
+        observe: 'response',
+        headers: new HttpHeaders(headers)
+      } as any;
+    }
+  };
+
+  private readonly handle = {
+    response: (response: HttpResponse<any>, data: ajaxTypeInterface): void => {
+      if (!response || !response.body) {
+        alert('There was no response from the server');
+        return;
+      }
+      if (data.callback) {
+        data.callback(response.body);
+      }
+    },
+    error: (error: HttpErrorResponse): void => {
+      if (error.error instanceof ErrorEvent) {
+        alert(`An error occurred: ${error.error.message.toString()}`);
+        return;
+      }
+      if (error.status === 200) {
+        alert(error.error.text);
+        return;
+      }
+      alert(`Backend returned code ${error.status}`);
+    }
+  };
 
 }
